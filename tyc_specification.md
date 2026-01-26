@@ -143,7 +143,6 @@ The following character sequences are reserved as keywords and cannot be used as
 | **auto** | **break** | **case** | **continue** | **default** | **else** |
 |----------|-----------|----------|--------------|-------------|----------|
 | **float** | **for** | **if** | **int** | **return** | **string** |
-|----------|-----------|----------|----------|-----------|-----------|
 | **struct** | **switch** | **void** | **while** | | |
 
 ### Operator

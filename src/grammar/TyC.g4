@@ -25,6 +25,8 @@ options{
 }
 
 // TODO: Define grammar rules here
+
+// Tokens Rules
 program: EOF ;
 
 DIGITS : [0-9]+ ;
@@ -123,6 +125,87 @@ UNCLOSE_STRING
   : '"' STR_CHAR* (EOF | '\r' | '\n')
   ;
 
+
+// Declarations rules
+structDecl
+  : STRUCT ID LBRACE structMemberDecl* RBRACE SEMI
+  ;
+
+structMemberDecl
+  : type ID SEMI        // no AUTO here
+  ;
+
+funcDecl
+  : (returnType)? ID LPAREN paramList? RPAREN block
+  ;
+
+returnType
+  : type
+  | VOID
+  ;
+
+paramList
+  : param (COMMA param)*
+  ;
+
+param
+  : type ID             // no AUTO here
+  ;
+
+type
+  : INT
+  | FLOAT
+  | STRING
+  | ID                  // struct type name
+  ;
+
+// Variable Declaration Rules
+  varDecl
+  : type ID (ASSIGN expr)? SEMI
+  ;
+
+// Statement Rules
+exprStmt
+  : expr SEMI
+  ;
+
+// Expression Rules
+expr : logicalOr ;
+
+logicalOr  : logicalAnd (OR logicalAnd)* ;
+logicalAnd : equality   (AND equality)* ;
+equality   : relational ((EQ | NEQ) relational)* ;
+relational : additive   ((LT|LE|GT|GE) additive)* ;
+additive   : multiplicative ((PLUS|MINUS) multiplicative)* ;
+multiplicative : unary ((MUL|DIV|MOD) unary)* ;
+
+unary
+  : (PLUS|MINUS|NOT|INC|DEC) unary
+  | primary
+  ;
+
+primary
+  : INT_LIT
+  | FLOAT_LIT
+  | STRING_LIT
+  | ID
+  | LPAREN expr RPAREN
+  ;
+
+block
+  : LBRACE (varDecl | exprStmt | block)* RBRACE
+  ;
+
+// Function Call Rules
+funcCall
+  : ID LPAREN argList? RPAREN
+  ;
+
+argList
+  : expr (COMMA expr)*
+  ;
+
+// Whitespace
 WS : [ \t\r\n\f]+ -> skip ; // skip spaces, tabs
 
 ERROR_CHAR: .;
