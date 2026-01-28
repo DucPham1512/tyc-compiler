@@ -27,13 +27,13 @@ options{
 // TODO: Define grammar rules here
 
 // Tokens Rules
-program: EOF ;
+program: (funcDecl | structDecl)* EOF ;
 
 DIGITS : [0-9]+ ;
 
 BLOCK_CMT : '/*' .*? '*/' -> skip ; // skip block comments
 
-LINE_CMT : '//' .*? ~[\r\n]* -> skip ; // skip line comments
+LINE_CMT : '//' ~[\r\n]* -> skip ; // skip line comments
 
 AUTO      : 'auto' ;
 BREAK     : 'break' ;
@@ -92,9 +92,10 @@ LPAREN   : '(' ;
 RPAREN   : ')' ;
 SEMI     : ';' ;
 COMMA    : ',' ;
+COLON    : ':' ;
 
 // Int Literal
-INT_LIT: MINUS?DIGITS ;
+INT_LIT: DIGITS ;
 
 
 // Float Literal
@@ -102,11 +103,10 @@ fragment EXP: [eE]MINUS?DIGITS;
 // better (more standard): [eE] [+\-]? DIGITS
 
 FLOAT_LIT
-  : MINUS? (
-        DIGITS '.'                         // 1.
-      | DIGITS '.' DIGITS EXP?             // 1.23 or 1.23e4  (requires digits before EXP)
-      | '.' DIGITS EXP?                    // .5 or .5e2
-    )
+  : DIGITS '.'                         // 1.
+  | DIGITS '.' DIGITS EXP?             // 1.23 or 1.23e4  (requires digits before EXP)
+  | '.' DIGITS EXP?                    // .5 or .5e2
+
   ;
 
 // String Literal
@@ -123,16 +123,6 @@ ILLEGAL_ESCAPE
 
 UNCLOSE_STRING
   : '"' STR_CHAR* (EOF | '\r' | '\n')
-  ;
-
-
-// Declarations rules
-structDecl
-  : STRUCT ID LBRACE structMemberDecl* RBRACE SEMI
-  ;
-
-structMemberDecl
-  : type ID SEMI        // no AUTO here
   ;
 
 funcDecl
@@ -159,9 +149,25 @@ type
   | ID                  // struct type name
   ;
 
+// Struct Declarations rules
+structDecl
+  : STRUCT ID LBRACE structMemberDecl* RBRACE SEMI
+  ;
+
+structMemberDecl
+  : type ID SEMI        // no AUTO here
+  ;
+
+structInit
+  : type ID ASSIGN LBRACE exprList? RBRACE
+  ;
+
+
 // Variable Declaration Rules
   varDecl
   : type ID (ASSIGN expr)? SEMI
+  | AUTO ID (ASSIGN expr)? SEMI
+  | structInit SEMI
   ;
 
 // Statement Rules
@@ -169,8 +175,22 @@ exprStmt
   : expr SEMI
   ;
 
+exprList
+  : expr (COMMA expr)*
+  ;
+
 // Expression Rules
-expr : logicalOr ;
+
+expr : assignExpr ;
+
+assignExpr
+  : logicalOr
+  | lvalue ASSIGN assignExpr
+  ;
+
+lvalue
+  : ID (DOT ID)*
+  ;
 
 logicalOr  : logicalAnd (OR logicalAnd)* ;
 logicalAnd : equality   (AND equality)* ;
@@ -181,7 +201,11 @@ multiplicative : unary ((MUL|DIV|MOD) unary)* ;
 
 unary
   : (PLUS|MINUS|NOT|INC|DEC) unary
-  | primary
+  | postfix
+  ;
+
+postfix
+  : primary postfixOp*
   ;
 
 primary
@@ -192,13 +216,95 @@ primary
   | LPAREN expr RPAREN
   ;
 
-block
-  : LBRACE (varDecl | exprStmt | block)* RBRACE
+// Postfix Operator Rules
+postfixOp
+  : LPAREN argList? RPAREN   // function call
+  | DOT ID                   // member access
+  | INC                      // postfix ++
+  | DEC                      // postfix --
+  ;
+// If Statement Rules
+ifStmt
+  : IF LPAREN expr RPAREN block (ELSE block)?
   ;
 
-// Function Call Rules
-funcCall
-  : ID LPAREN argList? RPAREN
+// While Statement Rules
+whileStmt
+  : WHILE LPAREN expr RPAREN block
+  ;
+
+// For Statement Rules
+forStmt
+  : FOR LPAREN forInit? SEMI forCond? SEMI forUpdate? RPAREN block
+  ;
+
+forInit
+  : varDeclNoSemi
+  | expr
+  ;
+
+forCond
+  : expr
+  ;
+
+forUpdate
+  : expr
+  ;
+
+varDeclNoSemi
+  : type ID (ASSIGN expr)?
+  | AUTO ID (ASSIGN expr)?
+  | structInitNoSemi
+  ;
+
+structInitNoSemi
+  : type ID ASSIGN LBRACE exprList? RBRACE
+  ;
+
+// Switch Statement Rules
+switchStmt
+  : SWITCH LPAREN expr RPAREN LBRACE switchSection* RBRACE
+  ;
+
+switchSection
+  : caseLabel+ stmt*
+  ;
+
+caseLabel
+  : CASE expr COLON
+  | DEFAULT COLON
+  ;
+
+// Continue Statement Rules
+continueStmt
+  : CONTINUE SEMI
+  ;
+
+// Break Statement Rules
+breakStmt
+  : BREAK SEMI
+  ;
+
+// Return Statement Rules
+returnStmt
+  : RETURN expr? SEMI
+  ;
+
+// Statement Rules
+stmt
+  : exprStmt
+  | ifStmt
+  | whileStmt
+  | forStmt
+  | switchStmt
+  | continueStmt
+  | breakStmt
+  | returnStmt
+  ;
+
+// Code Block Rules
+block
+  : LBRACE (varDecl | stmt | block)* RBRACE
   ;
 
 argList
