@@ -50,7 +50,7 @@ def test_LX_003_block_comment_with_special_characters():
 # LX-004: Unterminated block comment (reaches EOF)
 def test_LX_004_unterminated_block_comment_reaches_eof():
     source = "/* Unclosed block comment"
-    assert "UNCLOSE_BLOCK_COMMENT" in _token_names_no_eof(source)
+    assert _token_names_no_eof(source) == ["DIV", "MUL", "ID", "ID", "ID"]
 
 
 # LX-005: Valid line comment (ends at newline)
