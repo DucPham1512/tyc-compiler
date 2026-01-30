@@ -133,7 +133,9 @@ def test_LX_017_valid_identifier_mixed():
 # LX-018: Invalid identifier starting with digits
 def test_LX_018_invalid_identifier_starts_with_digits():
     source = "1234Identifier"
-    assert _token_names_no_eof(source) == ["INT_LIT", "ID"]
+    with pytest.raises(lexererr.ErrorToken) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Error Token 1"
 
 
 def test_LX_019_invalid_identifier_special_prefix():
