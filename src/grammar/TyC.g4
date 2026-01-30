@@ -29,7 +29,7 @@ options{
 // Tokens Rules
 program: (funcDecl | structDecl)* EOF ;
 
-DIGITS : [0-9]+ ;
+fragment DIGITS : [0-9]+ ;
 
 BLOCK_CMT : '/*' .*? '*/' -> skip ; // skip block comments
   
