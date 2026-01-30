@@ -550,6 +550,54 @@ def test_LX_082_unclosed_string_eof():
     assert str(e.value) == "Unclosed String: "
 
 
+# LX-083: Escape Backspace
+def test_LX_083_escape_backspace():
+    source = "\"Test\\bCase\""
+    assert _token_names_no_eof(source) == ["STRING_LIT"]
+
+
+# LX-084: Escape Formfeed
+def test_LX_084_escape_formfeed():
+    source = "\"Page\\fBreak\""
+    assert _token_names_no_eof(source) == ["STRING_LIT"]
+
+
+# LX-085: Escape Carriage Return
+def test_LX_085_escape_carriage_return():
+    source = "\"Line\\rReturn\""
+    assert _token_names_no_eof(source) == ["STRING_LIT"]
+
+
+# LX-086: Escape Newline
+def test_LX_086_escape_newline():
+    source = "\"New\\nLine\""
+    assert _token_names_no_eof(source) == ["STRING_LIT"]
+
+
+# LX-087: Escape Horizontal Tab
+def test_LX_087_escape_horizontal_tab():
+    source = "\"Col1\\tCol2\""
+    assert _token_names_no_eof(source) == ["STRING_LIT"]
+
+
+# LX-088: Escape Double Quote
+def test_LX_088_escape_double_quote():
+    source = "\"Quote: \\\"\""
+    assert _token_names_no_eof(source) == ["STRING_LIT"]
+
+
+# LX-089: Escape Backslash
+def test_LX_089_escape_backslash():
+    source = "\"Path\\\\to\""
+    assert _token_names_no_eof(source) == ["STRING_LIT"]
+
+
+# LX-090: All Legal Escapes Mixed
+def test_LX_090_all_legal_escapes_mixed():
+    source = "\"A\\bB\\fC\\rD\\nE\\tF\\\"G\\\\\""
+    assert _token_names_no_eof(source) == ["STRING_LIT"]
+
+
 # LX-091: Illegal: Bell/Alert (\a)
 def test_LX_091_illegal_escape_bell():
     source = "\"Ring \\a bell\""
