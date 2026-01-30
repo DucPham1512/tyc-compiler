@@ -481,3 +481,150 @@ def test_LX_072_separators():
     source = "{ } ( ) ; , :"
     assert _token_names_no_eof(source) == ["LBRACE", "RBRACE", "LPAR", "RPAR", "SEMI", "COMMA", "COLON"]
 
+
+## Test Cases for String Literals ##
+# LX-073: Empty String
+def test_LX_073_empty_string():
+    source = "\"\""
+    assert _token_names_no_eof(source) == ["STRING_LIT"]
+
+
+# LX-074: Simple String
+def test_LX_074_simple_string():
+    source = "\"Hello World\""
+    assert _token_names_no_eof(source) == ["STRING_LIT"]
+
+
+# LX-075: Long String
+def test_LX_075_long_string():
+    source = "\"Very very very very very very very very very very very very very very  very very very  long string\""
+    assert _token_names_no_eof(source) == ["STRING_LIT"]
+
+
+# LX-076: String with Escapes
+def test_LX_076_string_with_escapes():
+    source = "\"Line\\nTab\\t\""
+    assert _token_names_no_eof(source) == ["STRING_LIT"]
+
+
+# LX-077: Escaped Quote/Slash
+def test_LX_077_escaped_quote_and_backslash():
+    source = "\"He said \\\"Hi\\\" \\\\\""
+    assert _token_names_no_eof(source) == ["STRING_LIT"]
+
+
+# LX-078: Extended ASCII
+def test_LX_078_extended_ascii():
+    source = "\"\x80\xFF\""
+    assert _token_names_no_eof(source) == ["STRING_LIT"]
+    
+    # LX-079: Error: Illegal Escape (Checks for invalid escape char)
+def test_LX_079_illegal_escape_invalid_char():
+    source = "\"Bad escape: \\a\""
+    with pytest.raises(lexererr.IllegalEscape) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Illegal Escape In String: \\a"
+
+
+# LX-080: Error: Illegal Escape Priority (Illegal escape detected before unclosed)
+def test_LX_080_illegal_escape_priority_over_unclosed():
+    source = "\"Invalid \\a and unclosed"
+    with pytest.raises(lexererr.IllegalEscape) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Illegal Escape In String: \\a"
+
+
+# LX-081: Error: Unclosed String (Newline) (CRLF encountered before closing quote)
+def test_LX_081_unclosed_string_newline():
+    source = "\"Unclosed string\r\nwith newline\""
+    with pytest.raises(lexererr.UncloseString) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Unclosed String: \\r"
+
+
+# LX-082: Error: Unclosed String (EOF)
+def test_LX_082_unclosed_string_eof():
+    source = "\"End of file"
+    with pytest.raises(lexererr.UncloseString) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Unclosed String: "
+
+
+# LX-091: Illegal: Bell/Alert (\a)
+def test_LX_091_illegal_escape_bell():
+    source = "\"Ring \\a bell\""
+    with pytest.raises(lexererr.IllegalEscape) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Illegal Escape In String: \\a"
+
+
+# LX-092: Illegal: Vertical Tab (\v)
+def test_LX_092_illegal_escape_vertical_tab():
+    source = "\"Vertical \\v Tab\""
+    with pytest.raises(lexererr.IllegalEscape) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Illegal Escape In String: \\v"
+
+
+# LX-093: Illegal: Single Quote (\')
+def test_LX_093_illegal_escape_single_quote():
+    source = "\"It\\'s invalid\""
+    with pytest.raises(lexererr.IllegalEscape) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Illegal Escape In String: \\'"
+
+
+# LX-094: Illegal: Question Mark (\?)
+def test_LX_094_illegal_escape_question_mark():
+    source = "\"What\\?\""
+    with pytest.raises(lexererr.IllegalEscape) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Illegal Escape In String: ?"
+
+
+# LX-095: Illegal: Null Character (\0)
+def test_LX_095_illegal_escape_null_char():
+    source = "\"Null \\0 byte\""
+    with pytest.raises(lexererr.IllegalEscape) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Illegal Escape In String: \\0"
+
+
+# LX-096: Illegal: Unknown Char (\z)
+def test_LX_096_illegal_escape_unknown_char():
+    source = "\"Random \\z escape\""
+    with pytest.raises(lexererr.IllegalEscape) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Illegal Escape In String: \\z"
+
+
+# LX-097: Illegal: Number (\1)
+def test_LX_097_illegal_escape_number():
+    source = "\"Number \\1 escape\""
+    with pytest.raises(lexererr.IllegalEscape) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Illegal Escape In String: \\1"
+
+
+# LX-098: Illegal Priority Case 1 (first illegal escape wins)
+def test_LX_098_illegal_escape_priority_case_1():
+    source = "\"Valid \\n but \\a then \\t\""
+    with pytest.raises(lexererr.IllegalEscape) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Illegal Escape In String: \\a"
+
+
+# LX-099: Illegal Priority Case 2 (illegal escape beats unclosed)
+def test_LX_099_illegal_escape_priority_case_2():
+    source = "\"Unclosed and \\a illegal"
+    with pytest.raises(lexererr.IllegalEscape) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Illegal Escape In String: \\a"
+
+
+# LX-100: Unclose string (EOF)
+def test_LX_100_unclosed_string():
+    source = "\"Unclosed string"
+    with pytest.raises(lexererr.UncloseString) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Unclosed String: "
