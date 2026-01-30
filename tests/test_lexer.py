@@ -189,3 +189,88 @@ def test_LX_025_invalid_identifier_non_ascii():
     with pytest.raises(lexererr.ErrorToken) as e:
         _token_names_no_eof(source)
     assert str(e.value) == "Error Token 汉"
+
+
+## Test Cases for Integer Literals ##
+# LX-026: Valid integer literal 1
+def test_LX_026_valid_integer_literal_1():
+    source = "13245335"
+    assert _token_names_no_eof(source) == ["INT_LIT"]
+
+
+# LX-027: Valid integer literal 2
+def test_LX_027_valid_integer_literal_2():
+    source = "11314353"
+    assert _token_names_no_eof(source) == ["INT_LIT"]
+
+
+# LX-028: Valid integer literal 3
+def test_LX_028_valid_integer_literal_3():
+    source = "0"
+    assert _token_names_no_eof(source) == ["INT_LIT"]
+
+
+# LX-029: Valid integer literal 4 (negative)
+def test_LX_029_valid_integer_literal_4_negative():
+    source = "-31254235"
+    assert _token_names_no_eof(source) == ["INT_LIT"]
+
+
+# LX-030: Valid integer literal 5
+def test_LX_030_valid_integer_literal_5():
+    source = "32423"
+    assert _token_names_no_eof(source) == ["INT_LIT"]
+
+
+# LX-031: Valid integer literal 6
+def test_LX_031_valid_integer_literal_6():
+    source = "0"
+    assert _token_names_no_eof(source) == ["INT_LIT"]
+
+
+# LX-032: Valid integer literal 7
+def test_LX_032_valid_integer_literal_7():
+    source = "123"
+    assert _token_names_no_eof(source) == ["INT_LIT"]
+
+
+# LX-033: Valid integer literal 8 (max 32-bit signed)
+def test_LX_033_valid_integer_literal_8_max_int32():
+    source = "2147483647"
+    assert _token_names_no_eof(source) == ["INT_LIT"]
+
+
+# LX-034: Valid integer literal 9 (negative)
+def test_LX_034_valid_integer_literal_9_negative():
+    source = "-45"
+    assert _token_names_no_eof(source) == ["INT_LIT"]
+
+
+# LX-035: Invalid integer literal 1 (underscore splits tokens)
+def test_LX_035_invalid_integer_literal_1_underscore():
+    source = "12_34"
+    assert _token_names_no_eof(source) == ["INT_LIT", "UNDERSCORE", "INT_LIT"]
+
+
+# LX-036: Invalid integer literal 2 (0x10 splits into int * int)
+def test_LX_036_invalid_integer_literal_2_hex_like():
+    source = "0x10"
+    assert _token_names_no_eof(source) == ["INT_LIT", "MUL", "INT_LIT"]
+
+
+# LX-037: Invalid integer literal 3 (actually float literal)
+def test_LX_037_invalid_integer_literal_3_is_float():
+    source = "1.20E+04"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-038: Invalid integer literal 4 (trailing minus)
+def test_LX_038_invalid_integer_literal_4_trailing_minus():
+    source = "45-"
+    assert _token_names_no_eof(source) == ["INT_LIT", "SUB"]
+
+
+# LX-039: Invalid integer literal 5 (actually float literal)
+def test_LX_039_invalid_integer_literal_5_is_float():
+    source = "12.34"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
