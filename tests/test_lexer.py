@@ -441,5 +441,43 @@ def test_LX_066_invalid_float_literal_5_negative():
     assert _token_names_no_eof(source) == ["MINUS", "FLOAT_LIT"]
     
 
+## Test Cases for Keywords ##
+# LX-067: All keywords
+def test_LX_067_all_keywords():
+    source = "auto break case continue default else float for if int return string struct switch void while"
+    assert _token_names_no_eof(source) == [
+        "AUTO", "BREAK", "CASE", "CONTINUE", "DEFAULT", "ELSE",
+        "FLOAT", "FOR", "IF", "INT", "RETURN", "STRING",
+        "STRUCT", "SWITCH", "VOID", "WHILE"
+    ]
 
+
+# LX-068: Arithmetic operators
+def test_LX_068_arithmetic_operators():
+    source = "+ - * / %"
+    assert _token_names_no_eof(source) == ["PLUS", "MINUS", "MUL", "DIV", "MOD"]
+
+
+# LX-069: Relational operators
+def test_LX_069_relational_operators():
+    source = "== != < > <= >="
+    assert _token_names_no_eof(source) == ["EQ", "NEQ", "LT", "GT", "LE", "GE"]
+
+
+# LX-070: Logical operators
+def test_LX_070_logical_operators():
+    source = "|| && !"
+    assert _token_names_no_eof(source) == ["OR", "AND", "NOT"]
+
+
+# LX-071: Unary / assignment / member access
+def test_LX_071_unary_assignment_member_access():
+    source = "++ -- = ."
+    assert _token_names_no_eof(source) == ["INC", "DEC", "ASSIGN", "DOT"]
+
+
+# LX-072: Separators
+def test_LX_072_separators():
+    source = "{ } ( ) ; , :"
+    assert _token_names_no_eof(source) == ["LBRACE", "RBRACE", "LPAR", "RPAR", "SEMI", "COMMA", "COLON"]
 
