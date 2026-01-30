@@ -5,7 +5,7 @@ TODO: Implement 100 test cases for lexer
 
 import pytest
 from tests.utils import Tokenizer
-
+import lexererr
 
 def test_lexer_placeholder():
     """Placeholder test - replace with actual test cases"""
@@ -86,3 +86,106 @@ def test_LX_009_nested_line_comments():
 def test_LX_010_line_comment_with_special_characters():
     source = "// !@#$%^&*()_+-=[]{}|;:'\"<>/?`~ \\b \\t \\f \\\\ /* not a block */ // still comment \nid"
     assert _token_names_no_eof(source) == ["ID"]
+    
+## Test Cases for Identifiers ##
+# LX-011: Valid identifier (lowercase)
+def test_LX_011_valid_identifier_lowercase():
+    source = "validIdentifier"
+    assert _token_names_no_eof(source) == ["ID"]
+
+
+# LX-012: Valid identifier (case-sensitive)
+def test_LX_012_valid_identifier_case_sensitive():
+    source = "ValidIdentifier"
+    assert _token_names_no_eof(source) == ["ID"]
+
+
+# LX-013: Valid identifier with underscore and digits
+def test_LX_013_valid_identifier_underscore_digits():
+    source = "_valid_1234"
+    assert _token_names_no_eof(source) == ["ID"]
+
+
+# LX-014: Valid identifier single letter
+def test_LX_014_valid_identifier_single_letter():
+    source = "a"
+    assert _token_names_no_eof(source) == ["ID"]
+
+
+# LX-015: Valid identifier underscore only
+def test_LX_015_valid_identifier_single_underscore():
+    source = "_"
+    assert _token_names_no_eof(source) == ["ID"]
+
+
+# LX-016: Valid identifier underscore followed by digit
+def test_LX_016_valid_identifier_underscore_digit():
+    source = "_0"
+    assert _token_names_no_eof(source) == ["ID"]
+
+
+# LX-017: Valid identifier mixed letters digits underscore
+def test_LX_017_valid_identifier_mixed():
+    source = "A0_b2"
+    assert _token_names_no_eof(source) == ["ID"]
+
+
+# LX-018: Invalid identifier starting with digits
+def test_LX_018_invalid_identifier_starts_with_digits():
+    source = "1234Identifier"
+    assert _token_names_no_eof(source) == ["INT_LIT", "ID"]
+
+
+def test_LX_019_invalid_identifier_special_prefix():
+    source = "!@#@$identifier"
+    with pytest.raises(lexererr.ErrorToken) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Error Token !"
+
+
+# LX-020: Invalid identifier with special characters at end
+def test_LX_020_invalid_identifier_special_suffix():
+    source = "identifier!@#$%$"
+    with pytest.raises(lexererr.ErrorToken) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Error Token !"
+
+
+# LX-021: Invalid identifier starting with zero
+def test_LX_021_invalid_identifier_zero_prefix():
+    source = "0identifier"
+    with pytest.raises(lexererr.ErrorToken) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Error Token 0"
+
+
+# LX-022: Invalid identifier starting with digit followed by letter
+def test_LX_022_invalid_identifier_digit_letter():
+    source = "9a"
+    with pytest.raises(lexererr.ErrorToken) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Error Token 9"
+
+
+# LX-023: Invalid identifier containing dollar sign
+def test_LX_023_invalid_identifier_dollar_sign():
+    source = "a$"
+    with pytest.raises(lexererr.ErrorToken) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Error Token $"
+
+
+# LX-024: Invalid identifier starting with hash
+def test_LX_024_invalid_identifier_hash_prefix():
+    source = "#name"
+    with pytest.raises(lexererr.ErrorToken) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Error Token #"
+
+
+# LX-025: Invalid identifier non ASCII characters
+def test_LX_025_invalid_identifier_non_ascii():
+    source = "汉字"
+    with pytest.raises(lexererr.ErrorToken) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Error Token 汉"
