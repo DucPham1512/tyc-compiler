@@ -269,10 +269,177 @@ def test_LX_037_invalid_integer_literal_3_is_float():
 # LX-038: Invalid integer literal 4 (trailing minus)
 def test_LX_038_invalid_integer_literal_4_trailing_minus():
     source = "45-"
-    assert _token_names_no_eof(source) == ["INT_LIT", "SUB"]
+    assert _token_names_no_eof(source) == ["INT_LIT", "MINUS"]
 
 
 # LX-039: Invalid integer literal 5 (actually float literal)
 def test_LX_039_invalid_integer_literal_5_is_float():
     source = "12.34"
     assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+    
+
+## Test Cases for Float Literals ##
+# LX-040: Valid float literal 1
+def test_LX_040_valid_float_literal_1():
+    source = "213.4412343"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-041: Valid float literal 2
+def test_LX_041_valid_float_literal_2():
+    source = "2133.e12344134"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-042: Valid float literal 3
+def test_LX_042_valid_float_literal_3():
+    source = "3423423.e-1243452"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-043: Valid float literal 4
+def test_LX_043_valid_float_literal_4():
+    source = "321435.e+324324"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-044: Valid float literal 5
+def test_LX_044_valid_float_literal_5():
+    source = "231244.E1445315"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-045: Valid float literal 6
+def test_LX_045_valid_float_literal_6():
+    source = "43254325.E+43252"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-046: Valid float literal 7
+def test_LX_046_valid_float_literal_7():
+    source = "3434.E324234"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-047: Valid float literal 8
+def test_LX_047_valid_float_literal_8():
+    source = "1."
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-048: Valid float literal 9
+def test_LX_048_valid_float_literal_9():
+    source = ".5"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-049: Valid float literal 10
+def test_LX_049_valid_float_literal_10():
+    source = ".E123443"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-050: Valid float literal 11
+def test_LX_050_valid_float_literal_11():
+    source = ".e1432"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-051: Valid float literal 12
+def test_LX_051_valid_float_literal_12():
+    source = ".e+343242"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-052: Valid float literal 13
+def test_LX_052_valid_float_literal_13():
+    source = ".e-234234"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-053: Valid float literal 14
+def test_LX_053_valid_float_literal_14():
+    source = ".E-342432"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-054: Valid float literal 15
+def test_LX_054_valid_float_literal_15():
+    source = ".E+2657"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-055: Valid float literal 16
+def test_LX_055_valid_float_literal_16():
+    source = "3.14"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-056: Valid float literal 17
+def test_LX_056_valid_float_literal_17():
+    source = "1.23E+04"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-057: Valid float literal 18
+def test_LX_057_valid_float_literal_18():
+    source = "5.67E-02"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-058: Valid float literal 19
+def test_LX_058_valid_float_literal_19():
+    source = "5.00E+01"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-059: Valid float literal 20
+def test_LX_059_valid_float_literal_20():
+    source = "1.00E+01"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-060: Valid float literal 21
+def test_LX_060_valid_float_literal_21():
+    source = "0.001"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-061: Valid float literal 22
+def test_LX_061_valid_float_literal_22():
+    source = "1.00E+00"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT"]
+
+
+# LX-062: Invalid float literal 1
+def test_LX_062_invalid_float_literal_1():
+    source = "1.23e"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT", "ID"]
+
+
+# LX-063: Invalid float literal 2
+def test_LX_063_invalid_float_literal_2():
+    source = "1.23E-"
+    assert _token_names_no_eof(source) == ["FLOAT_LIT", "ID", "MINUS"]
+
+
+# LX-064: Invalid float literal 3
+def test_LX_064_invalid_float_literal_3():
+    source = "0..1"
+    assert _token_names_no_eof(source) == ["INT_LIT", "DOT", "DOT", "INT_LIT"]
+
+
+# LX-065: Invalid float literal 4
+def test_LX_065_invalid_float_literal_4():
+    source = "1.2.3"
+    assert _token_names_no_eof(source) == ["INT_LIT", "DOT", "INT_LIT", "DOT", "INT_LIT"]
+
+
+# LX-066: Invalid float literal 5 (negative float)
+def test_LX_066_invalid_float_literal_5_negative():
+    source = "-1.5"
+    assert _token_names_no_eof(source) == ["MINUS", "FLOAT_LIT"]
+    
+
+
+
