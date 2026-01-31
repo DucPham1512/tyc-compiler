@@ -95,18 +95,17 @@ COMMA    : ',' ;
 COLON    : ':' ;
 
 // Int Literal
-INT_LIT: DIGITS ;
+INT_LIT: '-'?DIGITS ;
 
 
 // Float Literal
-fragment EXP: [eE]MINUS?DIGITS;
-// better (more standard): [eE] [+\-]? DIGITS
+fragment EXP: [eE](MINUS|PLUS)?DIGITS;
 
 FLOAT_LIT
-  : DIGITS '.'                         // 1.
+  : '-'?(DIGITS '.'                         // 1.
   | DIGITS '.' DIGITS EXP?             // 1.23 or 1.23e4  (requires digits before EXP)
   | '.' DIGITS EXP?                    // .5 or .5e2
-
+  | DIGITS EXP)                         // 1e10
   ;
 
 // String Literal
@@ -115,14 +114,6 @@ fragment STR_CHAR : ~["\\\r\n] | ESC ;
 
 STRING_LIT
   : '"' STR_CHAR* '"'
-  ;
-
-ILLEGAL_ESCAPE
-  : '"' (STR_CHAR* '\\' ~[bfnrt"\\]) .*? '"'?   // bad escape after backslash
-  ;
-
-UNCLOSE_STRING
-  : '"' STR_CHAR* (EOF | '\r' | '\n')
   ;
 
 funcDecl
@@ -317,3 +308,11 @@ WS : [ \t\r\n\f]+ -> skip ; // skip spaces, tabs
 ERROR_CHAR: .;
 // ILLEGAL_ESCAPE:.;
 // UNCLOSE_STRING:.;
+ILLEGAL_ESCAPE
+  : '"' (STR_CHAR* '\\' ~[bfnrt"\\]) .*? '"'?
+  ;
+
+UNCLOSE_STRING
+  : '"' STR_CHAR* (EOF | '\r' | '\n')
+  ;
+
