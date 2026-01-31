@@ -687,9 +687,22 @@ def test_LX_099_illegal_escape_priority_case_2():
     assert str(e.value) == "Illegal Escape In String: \"Unclosed and \\a"
 
 
-# LX-100: Unclose string (EOF)
-def test_LX_100_unclosed_string():
-    source = "\"Unclosed string"
+# LX-100: String with unprintable ASCII characters (0-31)
+def test_LX_100_string_with_ascii_0_31():
+    source = "\"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\\n\x0B\x0C\\r\x0E\x0F\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D\x1E\x1F\""
+    assert _token_names_no_eof(source) == ["STRING_LIT"]
+   
+
+# LX-101: Unclosed String with direct \n character    
+def test_LX_101_direct_newline_in_string_1():
+    source = "\"This string contains a direct newline \n character\""
     with pytest.raises(lexererr.UncloseString) as e:
         _token_names_no_eof(source)
-    assert str(e.value) == "Unclosed String: \"Unclosed string"
+    assert str(e.value) == "Unclosed String: \"This string contains a direct newline \n"
+
+# LX-102: Unclosed String with direct \r character
+def test_LX_102_direct_newline_in_string_2():
+    source = "\"Another string with direct newline \r here\""
+    with pytest.raises(lexererr.UncloseString) as e:
+        _token_names_no_eof(source)
+    assert str(e.value) == "Unclosed String: \"Another string with direct newline \r"
