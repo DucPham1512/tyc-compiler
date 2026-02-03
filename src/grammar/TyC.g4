@@ -114,7 +114,9 @@ fragment STR_CHAR : ~["\\\r\n] | ESC ;
 
 STRING_LIT
   : '"' STR_CHAR* '"'
+    { self.text = self.text[1:-1] }
   ;
+
 
 funcDecl
   : (returnType)? ID LPAREN paramList? RPAREN block
@@ -309,10 +311,12 @@ ERROR_CHAR: .;
 // ILLEGAL_ESCAPE:.;
 // UNCLOSE_STRING:.;
 ILLEGAL_ESCAPE
-  : '"' (STR_CHAR* '\\' ~[bfnrt"\\]) .*? '"'?
+  : '"' (STR_CHAR* '\\' ~[bfnrt"\\])
+    { self.text = self.text[1:] }
   ;
 
 UNCLOSE_STRING
   : '"' STR_CHAR* (EOF | '\r' | '\n')
+    { self.text = self.text[1:] }
   ;
 
