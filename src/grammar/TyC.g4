@@ -18,7 +18,10 @@ def emit(self):
         raise ErrorToken(result.text); 
     else:
         return super().emit();
+
+     
 }
+
 
 options{
 	language=Python3;
@@ -27,7 +30,7 @@ options{
 // TODO: Define grammar rules here
 
 // Tokens Rules
-program: (funcDecl | structDecl)* EOF ;
+program: (funcDecl | voidFuncDecl | typeInferFuncDecl | structDecl)* EOF ;
 
 fragment DIGITS : [0-9]+ ;
 
@@ -117,15 +120,18 @@ STRING_LIT
     { self.text = self.text[1:-1] }
   ;
 
+typeInferFuncDecl
+  : ID LPAREN paramList? RPAREN typeInferBlock
+  ;
+
+voidFuncDecl
+  : VOID ID LPAREN paramList? RPAREN  voidBlock
+  ;
 
 funcDecl
-  : (returnType)? ID LPAREN paramList? RPAREN block
+  : type? ID LPAREN paramList? RPAREN block
   ;
 
-returnType
-  : type
-  | VOID
-  ;
 
 paramList
   : param (COMMA param)*
@@ -152,15 +158,13 @@ structMemberDecl
   ;
 
 structInit
-  : type ID ASSIGN LBRACE exprList? RBRACE
+  : structInitNoSemi SEMI
   ;
 
 
 // Variable Declaration Rules
   varDecl
-  : type ID (ASSIGN expr)? SEMI
-  | AUTO ID (ASSIGN expr)? SEMI
-  | structInit SEMI
+  : varDeclNoSemi SEMI
   ;
 
 // Statement Rules
@@ -207,28 +211,29 @@ primary
   | STRING_LIT
   | ID
   | LPAREN expr RPAREN
+  | structLit
   ;
 
 // Postfix Operator Rules
 postfixOp
-  : LPAREN argList? RPAREN   // function call
+  : LPAREN exprList? RPAREN   // function call
   | DOT ID                   // member access
   | INC                      // postfix ++
   | DEC                      // postfix --
   ;
 // If Statement Rules
 ifStmt
-  : IF LPAREN expr RPAREN block (ELSE block)?
+  : IF LPAREN expr RPAREN typeInferBlock (ELSE typeInferBlock)?
   ;
 
 // While Statement Rules
 whileStmt
-  : WHILE LPAREN expr RPAREN block
+  : WHILE LPAREN expr RPAREN loopBlock
   ;
 
 // For Statement Rules
 forStmt
-  : FOR LPAREN forInit? SEMI forCond? SEMI forUpdate? RPAREN block
+  : FOR LPAREN forInit? SEMI forCond? SEMI forUpdate? RPAREN loopBlock
   ;
 
 forInit
@@ -254,13 +259,26 @@ structInitNoSemi
   : type ID ASSIGN LBRACE exprList? RBRACE
   ;
 
+initElem
+  : expr
+  | structLit
+  ;
+
+initList
+  : initElem (COMMA initElem)*
+  ;
+
+structLit
+  : LBRACE initList? RBRACE
+  ;
+
 // Switch Statement Rules
 switchStmt
   : SWITCH LPAREN expr RPAREN LBRACE switchSection* RBRACE
   ;
 
 switchSection
-  : caseLabel+ stmt*
+  : caseLabel+ stmt* breakStmt?
   ;
 
 caseLabel
@@ -280,30 +298,53 @@ breakStmt
 
 // Return Statement Rules
 returnStmt
-  : RETURN expr? SEMI
+  : RETURN expr SEMI
   ;
 
-// Statement Rules
-stmt
+voidReturnStmt
+  : RETURN SEMI
+  ;
+// No return statement
+noReturnstmt
   : exprStmt
   | ifStmt
   | whileStmt
   | forStmt
   | switchStmt
-  | continueStmt
-  | breakStmt
+  // | continueStmt
+  // | breakStmt
+  ;
+// Statement Rules
+stmt
+  : noReturnstmt
   | returnStmt
   ;
 
+voidStmt
+  : noReturnstmt
+  | voidReturnStmt
+  ;
 // Code Block Rules
 block
-  : LBRACE (varDecl | stmt | block)* RBRACE
+  : LBRACE (varDecl | stmt | block)* returnStmt (varDecl | stmt | block)*RBRACE
+  | stmt
   ;
 
-argList
-  : expr (COMMA expr)*
+typeInferBlock
+  : LBRACE (varDecl | stmt | typeInferBlock)* RBRACE
+  | stmt
   ;
 
+loopBlock
+  : LBRACE (varDecl | stmt | breakStmt | continueStmt | loopBlock)* RBRACE
+  | stmt
+  ; 
+
+// Void Block Rules
+voidBlock
+  : LBRACE (varDecl | voidStmt | voidBlock)* RBRACE
+  | voidStmt
+  ;
 // Whitespace
 WS : [ \t\r\n\f]+ -> skip ; // skip spaces, tabs
 
