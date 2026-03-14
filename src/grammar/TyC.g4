@@ -274,7 +274,7 @@ switchSection
   ;
 
 caseSection
-  : caseLabel+ stmt*
+  : caseLabel stmt*
   ;
 
 defaultSection

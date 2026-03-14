@@ -3,7 +3,7 @@ AST Generation module for TyC programming language.
 This module contains the ASTGeneration class that converts parse trees
 into Abstract Syntax Trees using the visitor pattern.
 """
-
+from functools import reduce
 from build.TyCVisitor import TyCVisitor
 from build.TyCParser import TyCParser
 from src.utils.nodes import *
@@ -162,8 +162,6 @@ class ASTGeneration(TyCVisitor):
             result = self.visit(section)
             if isinstance(result, DefaultStmt):
                 default = result
-            elif isinstance(result, list):
-                cases.extend(result)
             else:
                 cases.append(result)
 
@@ -175,13 +173,10 @@ class ASTGeneration(TyCVisitor):
         return self.visit(ctx.defaultSection())
 
     def visitCaseSection(self, ctx: TyCParser.CaseSectionContext):
-        # caseLabel+ stmt* — take first label's expr for CaseStmt
-        # multiple labels (fall-through grouping) each get their own CaseStmt
-        # sharing the same statement list
         stmts = [self.visit(s) for s in ctx.stmt()]
-        labels = [self.visit(label) for label in ctx.caseLabel()]
+        label = self.visit(ctx.caseLabel())
         # return list of CaseStmt, one per label, all sharing the same stmts
-        return [CaseStmt(label_expr, list(stmts)) for label_expr in labels]
+        return CaseStmt(label, list(stmts))
 
     def visitDefaultSection(self, ctx: TyCParser.DefaultSectionContext):
         stmts = [self.visit(s) for s in ctx.stmt()]

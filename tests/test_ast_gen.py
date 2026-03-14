@@ -356,7 +356,7 @@ def test_AX_062_switch_case_and_default():
 
 def test_AX_063_switch_fallthrough_labels():
     assert _generate("void main() { switch (x) { case 1: case 2: x = 1; break; } }") == \
-        "Program([FuncDecl(VoidType(), main, [], [SwitchStmt(switch Identifier(x) cases [CaseStmt(case IntLiteral(1): [ExprStmt(AssignExpr(Identifier(x) = IntLiteral(1))), BreakStmt()]), CaseStmt(case IntLiteral(2): [ExprStmt(AssignExpr(Identifier(x) = IntLiteral(1))), BreakStmt()])])])])"
+        "Program([FuncDecl(VoidType(), main, [], [SwitchStmt(switch Identifier(x) cases [CaseStmt(case IntLiteral(1): []), CaseStmt(case IntLiteral(2): [ExprStmt(AssignExpr(Identifier(x) = IntLiteral(1))), BreakStmt()])])])])"
 
 
 def test_AX_064_switch_multiple_cases():
