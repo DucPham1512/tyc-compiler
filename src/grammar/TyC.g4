@@ -30,7 +30,7 @@ options{
 // TODO: Define grammar rules here
 
 // Tokens Rules
-program: (funcDecl | voidFuncDecl | typeInferFuncDecl | structDecl)* EOF ;
+program: (funcDecl | voidFuncDecl | structDecl)* EOF ;
 
 fragment DIGITS : [0-9]+ ;
 
@@ -120,16 +120,12 @@ STRING_LIT
     { self.text = self.text[1:-1] }
   ;
 
-typeInferFuncDecl
-  : ID LPAREN paramList? RPAREN typeInferBlock
-  ;
-
 voidFuncDecl
-  : VOID ID LPAREN paramList? RPAREN  voidBlock
+  : VOID ID LPAREN paramList? RPAREN  blockStmt
   ;
 
 funcDecl
-  : type? ID LPAREN paramList? RPAREN block
+  : type? ID LPAREN paramList? RPAREN blockStmt
   ;
 
 
@@ -156,11 +152,6 @@ structDecl
 structMemberDecl
   : type ID SEMI        // no AUTO here
   ;
-
-structInit
-  : structInitNoSemi SEMI
-  ;
-
 
 // Variable Declaration Rules
   varDecl
@@ -223,17 +214,17 @@ postfixOp
   ;
 // If Statement Rules
 ifStmt
-  : IF LPAREN expr RPAREN typeInferBlock (ELSE typeInferBlock)?
+  : IF LPAREN expr RPAREN (blockStmt | stmt) (ELSE (blockStmt | stmt))?
   ;
 
 // While Statement Rules
 whileStmt
-  : WHILE LPAREN expr RPAREN loopBlock
+  : WHILE LPAREN expr RPAREN (blockStmt | stmt)
   ;
 
 // For Statement Rules
 forStmt
-  : FOR LPAREN forInit? SEMI forCond? SEMI forUpdate? RPAREN loopBlock
+  : FOR LPAREN forInit? SEMI forCond? SEMI forUpdate? RPAREN (blockStmt | stmt)
   ;
 
 forInit
@@ -278,12 +269,20 @@ switchStmt
   ;
 
 switchSection
-  : caseLabel+ stmt* breakStmt?
+  : caseSection
+  | defaultSection
+  ;
+
+caseSection
+  : caseLabel+ stmt*
+  ;
+
+defaultSection
+  : DEFAULT COLON stmt*
   ;
 
 caseLabel
   : CASE expr COLON
-  | DEFAULT COLON
   ;
 
 // Continue Statement Rules
@@ -298,52 +297,24 @@ breakStmt
 
 // Return Statement Rules
 returnStmt
-  : RETURN expr SEMI
-  ;
-
-voidReturnStmt
-  : RETURN SEMI
+  : RETURN expr? SEMI
   ;
 // No return statement
-noReturnstmt
+stmt
   : exprStmt
   | ifStmt
   | whileStmt
   | forStmt
   | switchStmt
-  // | continueStmt
-  // | breakStmt
-  ;
-// Statement Rules
-stmt
-  : noReturnstmt
+  | continueStmt
+  | breakStmt
+  | blockStmt
   | returnStmt
   ;
-
-voidStmt
-  : noReturnstmt
-  | voidReturnStmt
-  ;
+// Statement Rule
 // Code Block Rules
-block
-  : LBRACE (varDecl | stmt | block)* returnStmt (varDecl | stmt | block)*RBRACE
-  | stmt
-  ;
-
-typeInferBlock
-  : LBRACE (varDecl | stmt | typeInferBlock)* RBRACE
-  | stmt
-  ;
-
-loopBlock
-  : LBRACE (varDecl | stmt | breakStmt | continueStmt | loopBlock)* RBRACE
-  | stmt
-  ; 
-
-// Void Block Rules
-voidBlock
-  : LBRACE (varDecl | voidStmt | voidBlock)* RBRACE
-  | voidStmt
+blockStmt
+  : LBRACE (varDecl | stmt)* RBRACE
   ;
 // Whitespace
 WS : [ \t\r\n\f]+ -> skip ; // skip spaces, tabs

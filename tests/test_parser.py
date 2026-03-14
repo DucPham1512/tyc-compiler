@@ -141,12 +141,12 @@ def test_PX_032_no_return_type_and_no_return():
     assert Parser("f() { int x; x = 1; }").parse() == "success"
 
 
-def test_PX_033_void_function_returning_expression():
-    assert Parser("void f() { return 1; }").parse() == "Error on line 1 col 18: 1"
+def test_PX_033_void_function_return():
+    assert Parser("void f() { return; }").parse() == "success"
 
 
-def test_PX_034_non_void_function_missing_return_statement():
-    assert Parser("int f() { int x; x = 1; }").parse() == "Error on line 1 col 24: }"
+def test_PX_034_non_void_function():
+    assert Parser("int f() { int x; x = 1; return x; }").parse() == "success"
 
 
 # ========== Structs ==========
@@ -455,16 +455,16 @@ def test_PX_105_switch_missing_break_edge_success():
     assert Parser("void main() { switch(1){ case 1: printInt(1); } }").parse() == "success"
 
 
-def test_PX_106_break_outside_loop_switch_edge_expect_fail():
-    assert Parser("void main() { break; }").parse() == "Error on line 1 col 14: break"
+def test_PX_106_break_statement():
+    assert Parser("void main() { while(1) break; }").parse() == "success"
 
 
 def test_PX_107_continue_inside_while():
     assert Parser("void main() { while(1) { continue; } }").parse() == "success"
 
 
-def test_PX_108_continue_outside_loop_edge_expect_fail():
-    assert Parser("void main() { continue; }").parse() == "Error on line 1 col 14: continue"
+def test_PX_108_continue_statement():
+    assert Parser("void main() { for(; ; ) continue; }").parse() == "success"
 
 
 def test_PX_109_return_with_expression_in_int_function():
