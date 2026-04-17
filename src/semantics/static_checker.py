@@ -77,22 +77,22 @@ from .static_error import (
 
 
 class Symbol:
-    def __init__(self, kind: str, name: str, mtype: Optional[TyCType] = None, is_auto: bool = False):
-        self.kind = kind  # 'Variable', 'Function', 'Struct', 'Parameter'
-        self.name = name
-        self.mtype = mtype
-        self.is_auto = is_auto
+    def __init__(self, kind: str, p_strName: str, p_tType: Optional[TyCType] = None, p_blIs_auto: bool = False):
+        self.m_strKind = kind  # 'Variable', 'Function', 'Struct', 'Parameter'
+        self.m_strName = p_strName
+        self.m_tType = p_tType
+        self.m_blIs_auto = p_blIs_auto
 
 class CheckEnv:
     def __init__(self):
         # List of scopes, each scope is a dict: name -> Symbol
-        self.scopes: List[Dict[str, Symbol]] = [{}]
-        self.funcs: Dict[str, FuncDecl] = {}
-        self.structs: Dict[str, StructDecl] = {}
-        self.current_func: Optional[FuncDecl] = None
-        self.inferred_return_type: Optional[TyCType] = None
-        self.loop_level = 0
-        self.switch_level = 0
+        self.m_arrScopes: List[Dict[str, Symbol]] = [{}]
+        self.m_dicFuncs: Dict[str, FuncDecl] = {}
+        self.m_dicStructs: Dict[str, StructDecl] = {}
+        self.m_objCurrent_func: Optional[FuncDecl] = None
+        self.m_tInferred_return_type: Optional[TyCType] = None
+        self.m_iLoop_level = 0
+        self.m_iSwitch_level = 0
         
         # Add built-in functions
         self.add_builtin("readInt", [], IntType())
@@ -102,40 +102,40 @@ class CheckEnv:
         self.add_builtin("readString", [], StringType())
         self.add_builtin("printString", [StringType()], VoidType())
 
-    def add_builtin(self, name: str, param_types: List[TyCType], return_type: TyCType):
-        params = [Param(pt, f"p{i}") for i, pt in enumerate(param_types)]
+    def add_builtin(self, p_strName: str, p_arrParam_types: List[TyCType], p_tReturn_type: TyCType):
+        v_arrParams = [Param(pt, f"p{i}") for i, pt in enumerate(p_arrParam_types)]
         # Use a dummy block for built-ins
-        fdecl = FuncDecl(return_type, name, params, BlockStmt([]))
-        self.funcs[name] = fdecl
+        v_objFunc_decl = FuncDecl(p_tReturn_type, p_strName, v_arrParams, BlockStmt([]))
+        self.m_dicFuncs[p_strName] = v_objFunc_decl
 
-    def lookup(self, name: str, kind: str = None) -> Optional[Symbol]:
-        for scope in reversed(self.scopes):
-            if name in scope:
-                sym = scope[name]
-                if kind is None or sym.kind == kind:
-                    return sym
+    def lookup(self, p_strName: str, p_strKind: str = None) -> Optional[Symbol]:
+        for v_dicScope in reversed(self.m_arrScopes):
+            if p_strName in v_dicScope:
+                v_objSymbol = v_dicScope[p_strName]
+                if p_strKind is None or v_objSymbol.m_strKind == p_strKind:
+                    return v_objSymbol
         return None
 
     def enter_scope(self):
-        self.scopes.append({})
+        self.m_arrScopes.append({})
 
     def exit_scope(self):
-        self.scopes.pop()
+        self.m_arrScopes.pop()
 
-    def declare(self, kind: str, name: str, mtype: Optional[TyCType] = None, is_auto: bool = False):
-        if name in self.scopes[-1]:
-            raise Redeclared(kind, name)
-        sym = Symbol(kind, name, mtype, is_auto)
-        self.scopes[-1][name] = sym
-        return sym
+    def declare(self, p_strKind: str, v_strName: str, p_tType: Optional[TyCType] = None, p_blIs_auto: bool = False):
+        if v_strName in self.m_arrScopes[-1]:
+            raise Redeclared(p_strKind, v_strName)
+        v_objSymbol = Symbol(p_strKind, v_strName, p_tType, p_blIs_auto)
+        self.m_arrScopes[-1][v_strName] = v_objSymbol
+        return v_objSymbol
 
-def type_eq(t1: Optional[TyCType], t2: Optional[TyCType]) -> bool:
-    if t1 is None or t2 is None:
-        return t1 == t2
-    if type(t1) is not type(t2):
+def type_eq(p_tType1: Optional[TyCType], p_tType2: Optional[TyCType]) -> bool:
+    if p_tType1 is None or p_tType2 is None:
+        return p_tType1 == p_tType2
+    if type(p_tType1) is not type(p_tType2):
         return False
-    if isinstance(t1, StructType):
-        return t1.struct_name == t2.struct_name
+    if isinstance(p_tType1, StructType):
+        return p_tType1.struct_name == p_tType2.struct_name
     return True
 
 class StaticChecker(ASTVisitor):
@@ -144,65 +144,61 @@ class StaticChecker(ASTVisitor):
         self.visit(node, checkEnv)
 
     def visit_program(self, node: "Program", o: CheckEnv):
-        for decl in node.decls:
-            self.visit(decl, o)
+        for v_objDecl in node.decls:
+            self.visit(v_objDecl, o)
 
     def visit_struct_decl(self, node: "StructDecl", o: CheckEnv):
-        if node.name in o.structs:
+        if node.name in o.m_dicStructs:
             raise Redeclared("Struct", node.name)
-        o.structs[node.name] = node
+        o.m_dicStructs[node.name] = node
         
-        # Visit members to check for Redeclared and UndeclaredStruct
+        # Visit members
         o.enter_scope()
-        for member in node.members:
-            self.visit(member, o)
+        for v_objMember in node.members:
+            self.visit(v_objMember, o)
         o.exit_scope()
 
     def visit_member_decl(self, node: "MemberDecl", o: CheckEnv):
         # Members must have explicit types
+        if node.member_type is None:
+            raise TypeCannotBeInferred(node.name)
         self.visit(node.member_type, o)
         o.declare("Variable", node.name, node.member_type)
 
     def visit_func_decl(self, node: "FuncDecl", o: CheckEnv):
-        if node.name in o.funcs:
+        if node.name in o.m_dicFuncs:
             raise Redeclared("Function", node.name)
-        o.funcs[node.name] = node
+        o.m_dicFuncs[node.name] = node
         
         if node.return_type:
             self.visit(node.return_type, o)
             
-        o.current_func = node
-        o.inferred_return_type = None
+        o.m_objCurrent_func = node
+        o.m_tInferred_return_type = None
         
         o.enter_scope() # Scope for parameters AND outermost block
-        for param in node.params:
-            self.visit(param, o)
+        for v_objParam in node.params:
+            self.visit(v_objParam, o)
         
         # Tell visit_block_stmt NOT to enter a new scope for the body
-        o.enter_new_scope = False
+        o.m_blEnter_new_scope = False
         self.visit(node.body, o)
-        o.enter_new_scope = True
+        o.m_blEnter_new_scope = True
         
         # Determine actual return type
-        actual_ret = None
+        v_objActual_return_type = None
         if node.return_type:
-            actual_ret = node.return_type
+            v_objActual_return_type = node.return_type
         else:
-            actual_ret = o.inferred_return_type if o.inferred_return_type else VoidType()
-        
-        node.return_type = actual_ret
-            
-        # Check auto variables in the shared param/body scope
-        for name, sym in o.scopes[-1].items():
-            if sym.is_auto and sym.mtype is None:
-                raise TypeCannotBeInferred(name)
+            v_objActual_return_type = o.m_tInferred_return_type if o.m_tInferred_return_type else VoidType()
+            node.return_type = v_objActual_return_type
                 
         o.exit_scope()
-        o.current_func = None
+        o.m_objCurrent_func = None
 
     def visit_param(self, node: "Param", o: CheckEnv):
-        ptype = self.visit(node.param_type, o)
-        o.declare("Parameter", node.name, ptype)
+        v_tParam_type = self.visit(node.param_type, o)
+        o.declare("Parameter", node.name, v_tParam_type)
 
     # Type system
     def visit_int_type(self, node: "IntType", o: CheckEnv):
@@ -218,264 +214,249 @@ class StaticChecker(ASTVisitor):
         return node
 
     def visit_struct_type(self, node: "StructType", o: CheckEnv):
-        if node.struct_name not in o.structs:
+        if node.struct_name not in o.m_dicStructs:
             raise UndeclaredStruct(node.struct_name)
         return node
 
     # Statements
     def visit_block_stmt(self, node: "BlockStmt", o: CheckEnv):
-        # We might want to skip creating a new scope if this is a function body
-        # or similar. But let's check a flag in 'o'.
-        should_enter = getattr(o, 'enter_new_scope', True)
-        if should_enter:
+        # Skip creating new scope if the block is a function body,
+        # else entering new scope
+        v_blEnter_scope = v_blOld_flag = getattr(o, 'm_blEnter_new_scope', True)
+        o.m_blEnter_new_scope = True
+        
+        if v_blEnter_scope:
             o.enter_scope()
         
-        # Reset flag for nested blocks
-        old_flag = getattr(o, 'enter_new_scope', True)
-        o.enter_new_scope = True
+        for v_objStatement in node.statements:
+            self.visit(v_objStatement, o)
         
-        for stmt in node.statements:
-            self.visit(stmt, o)
-        
-        # Check auto variables
-        if should_enter:
-            for name, sym in o.scopes[-1].items():
-                if sym.is_auto and sym.mtype is None:
-                    raise TypeCannotBeInferred(name)
+        for v_strName, v_objSymbol in o.m_arrScopes[-1].items():
+            if v_objSymbol.m_blIs_auto and v_objSymbol.m_tType is None:
+                raise TypeCannotBeInferred(v_strName)
+        if v_blEnter_scope:
             o.exit_scope()
             
-        o.enter_new_scope = old_flag
+        o.m_blEnter_new_scope = v_blOld_flag
 
     def visit_var_decl(self, node: "VarDecl", o: CheckEnv):
-        var_type = None
-        is_auto = node.var_type is None
-        if not is_auto:
-            var_type = self.visit(node.var_type, o)
+        v_tVar_type = None
+        v_blIs_auto = node.var_type is None
+        if not v_blIs_auto:
+            v_tVar_type = self.visit(node.var_type, o)
             
-        init_type = None
+        v_tInit_type = None
         if node.init_value:
             # For struct literals, we need to pass the expected type
-            init_type = self.visit(node.init_value, (o, var_type))
-            if not is_auto:
-                if not type_eq(var_type, init_type):
+            v_tInit_type = self.visit(node.init_value, (o, v_tVar_type))
+            if not v_blIs_auto:
+                if not type_eq(v_tVar_type, v_tInit_type):
                     raise TypeMismatchInStatement(node)
             else:
                 # auto x = init; -> type is inferred from init
-                if init_type is None: # e.g. auto x = {1, 2}; unknown struct literal
+                if v_tInit_type is None: # e.g. auto x = {1, 2}; unknown struct literal
                     raise TypeCannotBeInferred(node.name)
-                var_type = init_type
-                is_auto = False
+                v_tVar_type = v_tInit_type
+                v_blIs_auto = False
                 
-        o.declare("Variable", node.name, var_type, is_auto)
+        o.declare("Variable", node.name, v_tVar_type, v_blIs_auto)
 
     def visit_if_stmt(self, node: "IfStmt", o: CheckEnv):
-        cond_type = self.visit(node.condition, o)
-        if not isinstance(cond_type, IntType):
+        v_blCondition_type = self.visit(node.condition, o)
+        if not isinstance(v_blCondition_type, IntType):
             raise TypeMismatchInStatement(node)
         self.visit(node.then_stmt, o)
         if node.else_stmt:
             self.visit(node.else_stmt, o)
 
     def visit_while_stmt(self, node: "WhileStmt", o: CheckEnv):
-        cond_type = self.visit(node.condition, o)
-        if not isinstance(cond_type, IntType):
+        v_blCondition_type = self.visit(node.condition, o)
+        if not isinstance(v_blCondition_type, IntType):
             raise TypeMismatchInStatement(node)
-        o.loop_level += 1
+        o.m_iLoop_level += 1
         self.visit(node.body, o)
-        o.loop_level -= 1
+        o.m_iLoop_level -= 1
 
     def visit_for_stmt(self, node: "ForStmt", o: CheckEnv):
         o.enter_scope()
         if node.init:
             self.visit(node.init, o)
         if node.condition:
-            cond_type = self.visit(node.condition, o)
-            if not isinstance(cond_type, IntType):
+            v_blCondition_type = self.visit(node.condition, o)
+            if not isinstance(v_blCondition_type, IntType):
                 raise TypeMismatchInStatement(node)
         if node.update:
             self.visit(node.update, o)
         
-        o.loop_level += 1
+        o.m_iLoop_level += 1
         self.visit(node.body, o)
         
-        # Check auto variables in for-loop scope (can happen if init is a VarDecl)
-        for name, sym in o.scopes[-1].items():
-            if sym.is_auto and sym.mtype is None:
+        # Check auto variables in for-loop scope
+        for name, sym in o.m_arrScopes[-1].items():
+            if sym.m_blIs_auto and sym.m_tType is None:
                 raise TypeCannotBeInferred(name)
                 
-        o.loop_level -= 1
+        o.m_iLoop_level -= 1
         o.exit_scope()
 
     def visit_switch_stmt(self, node: "SwitchStmt", o: CheckEnv):
-        expr_type = self.visit(node.expr, o)
-        if not isinstance(expr_type, IntType):
+        v_tExpr_type = self.visit(node.expr, o)
+        if not isinstance(v_tExpr_type, IntType):
             raise TypeMismatchInStatement(node)
         
-        o.switch_level += 1
-        # Switch has its own scope implicitly for cases? 
-        # Actually TyC switch is C-like fallthrough, typically it doesn't have a new scope per case unless {}.
-        # But variables declared in switch body (if allowed) are visible?
-        # The grammar usually puts cases in a block.
-        for case in node.cases:
-            self.visit(case, o)
+        o.m_iSwitch_level += 1
+        o.enter_scope() # Scope for switch cases
+        for v_objCase in node.cases:
+            self.visit(v_objCase, o)
         if node.default_case:
             self.visit(node.default_case, o)
-        o.switch_level -= 1
+        o.exit_scope()
+        o.m_iSwitch_level -= 1
 
     def visit_case_stmt(self, node: "CaseStmt", o: CheckEnv):
-        # Case expression must be int.
-        self.visit(node.expr, o) # Must be IntType
-        for stmt in node.statements:
-            self.visit(stmt, o)
+        v_tExpr_type = self.visit(node.expr, o)
+        if not isinstance(v_tExpr_type, IntType):
+            raise TypeMismatchInStatement(node)
+        for v_objStatement in node.statements:
+            self.visit(v_objStatement, o)
 
     def visit_default_stmt(self, node: "DefaultStmt", o: CheckEnv):
-        for stmt in node.statements:
-            self.visit(stmt, o)
+        for v_objStatement in node.statements:
+            self.visit(v_objStatement, o)
 
     def visit_break_stmt(self, node: "BreakStmt", o: CheckEnv):
-        if o.loop_level == 0 and o.switch_level == 0:
+        if o.m_iLoop_level == 0 and o.m_iSwitch_level == 0:
             raise MustInLoop(node)
 
     def visit_continue_stmt(self, node: "ContinueStmt", o: CheckEnv):
-        if o.loop_level == 0:
+        if o.m_iLoop_level == 0:
             raise MustInLoop(node)
 
     def visit_return_stmt(self, node: "ReturnStmt", o: CheckEnv):
-        func = o.current_func
-        ret_expr_type = None
+        v_objCurrent_func = o.m_objCurrent_func
+        v_tReturn_expr_type = None
         if node.expr:
             # For returning struct literals, use function return type as hint
-            expected = func.return_type if func.return_type else o.inferred_return_type
-            ret_expr_type = self.visit(node.expr, (o, expected))
+            v_tExpected_return_type = v_objCurrent_func.return_type if v_objCurrent_func.return_type else o.m_tInferred_return_type
+            v_tReturn_expr_type = self.visit(node.expr, (o, v_tExpected_return_type))
         else:
-            ret_expr_type = VoidType()
+            v_tReturn_expr_type = VoidType()
             
-        if func.return_type is None:
+        if v_objCurrent_func.return_type is None:
             # auto return type inference
-            if o.inferred_return_type is None:
-                o.inferred_return_type = ret_expr_type
+            if o.m_tInferred_return_type is None:
+                o.m_tInferred_return_type = v_tReturn_expr_type
             else:
-                if not type_eq(o.inferred_return_type, ret_expr_type):
+                if not type_eq(o.m_tInferred_return_type, v_tReturn_expr_type):
                     raise TypeMismatchInStatement(node)
         else:
             # explicit return type
-            if not type_eq(func.return_type, ret_expr_type):
+            if not type_eq(v_objCurrent_func.return_type, v_tReturn_expr_type):
                 raise TypeMismatchInStatement(node)
 
     def visit_expr_stmt(self, node: "ExprStmt", o: CheckEnv):
-        old_is_stmt = getattr(o, 'is_stmt', False)
-        o.is_stmt = True
+        v_blOld_is_stmt = getattr(o, 'm_blIs_stmt', False)
+        o.m_blIs_stmt = True
         self.visit(node.expr, o)
-        o.is_stmt = old_is_stmt
+        o.m_blIs_stmt = v_blOld_is_stmt
 
     # Expressions
     def visit_binary_op(self, node: "BinaryOp", o_in: Any):
         o = o_in[0] if isinstance(o_in, tuple) else o_in
         
-        # We might need to propagate type hints down if one side is known and the other is auto
-        ltype = self.visit(node.left, o)
-        rtype = self.visit(node.right, o)
+        v_tLeft_type = self.visit(node.left, o)
+        v_tRight_type = self.visit(node.right, o)
         
-        op = node.operator
+        v_strOperator = node.operator
         
-        if op in ['+', '-', '*', '/', '%', '==', '!=', '<', '>', '<=', '>=', '&&', '||']:
-            # Handle auto inference from binary op
-            if ltype is None and rtype is None:
-                # Both unknown
-                pass 
-            elif ltype is None and rtype is not None:
-                # Infer ltype from rtype
-                if isinstance(node.left, Identifier):
-                    sym = o.lookup(node.left.name)
-                    if sym and sym.is_auto:
-                        sym.mtype = rtype
-                        sym.is_auto = False
-                        ltype = rtype
-            elif rtype is None and ltype is not None:
-                # Infer rtype from ltype
-                if isinstance(node.right, Identifier):
-                    sym = o.lookup(node.right.name)
-                    if sym and sym.is_auto:
-                        sym.mtype = ltype
-                        sym.is_auto = False
-                        rtype = ltype
-            
-            # Now check types
-            if ltype is None or rtype is None:
-                if op in ['&&', '||', '%', '!', '++', '--']: # Operators that REQUIRE int
-                    # We could infer int here
-                    if ltype is None and isinstance(node.left, Identifier):
-                        sym = o.lookup(node.left.name)
-                        if sym and sym.is_auto: sym.mtype = IntType(); sym.is_auto = False; ltype = IntType()
-                    if rtype is None and isinstance(node.right, Identifier):
-                        sym = o.lookup(node.right.name)
-                        if sym and sym.is_auto: sym.mtype = IntType(); sym.is_auto = False; rtype = IntType()
+        # Handle auto inference from binary op
+        if v_tLeft_type is None and v_tRight_type is None:
+            # Both unknown
+            raise TypeCannotBeInferred(node)
+        elif v_tLeft_type is None and v_tRight_type is not None:
+            # Infer ltype from rtype
+            if isinstance(node.left, Identifier):
+                v_objSymbol = o.lookup(node.left.name)
+                if v_objSymbol and v_objSymbol.m_blIs_auto:
+                    v_objSymbol.m_tType = v_tRight_type
+                    v_objSymbol.m_blIs_auto = False
+                    v_tLeft_type = v_tRight_type
+        elif v_tRight_type is None and v_tLeft_type is not None:
+            # Infer rtype from ltype
+            if isinstance(node.right, Identifier):
+                v_objSymbol = o.lookup(node.right.name)
+                if v_objSymbol and v_objSymbol.m_blIs_auto:
+                    v_objSymbol.m_tType = v_tLeft_type
+                    v_objSymbol.m_blIs_auto = False
+                    v_tRight_type = v_tLeft_type
 
-            if ltype is None or rtype is None:
-                # Still unknown. Raising TypeCannotBeInferred for the first auto operand found.
-                if ltype is None and isinstance(node.left, Identifier):
-                    raise TypeCannotBeInferred(node.left)
-                if rtype is None and isinstance(node.right, Identifier):
-                    raise TypeCannotBeInferred(node.right)
-                raise TypeMismatchInExpression(node)
+        if v_tLeft_type is None or v_tRight_type is None:
+            raise TypeCannotBeInferred(node)
+        
+        # Check types
+        if v_strOperator in ['&&', '||', '%']: # Operators that require int
+            if isinstance(v_tLeft_type, IntType) and isinstance(v_tRight_type, IntType):
+                return IntType()
 
-            # Re-verify with resolved types
-            if op in ['+', '-', '*', '/']:
-                if isinstance(ltype, (IntType, FloatType)) and isinstance(rtype, (IntType, FloatType)):
-                    return FloatType() if isinstance(ltype, FloatType) or isinstance(rtype, FloatType) else IntType()
-            elif op == '%':
-                if isinstance(ltype, IntType) and isinstance(rtype, IntType): return IntType()
-            elif op in ['==', '!=', '<', '>', '<=', '>=']:
-                if isinstance(ltype, (IntType, FloatType)) and isinstance(rtype, (IntType, FloatType)): return IntType()
-            elif op in ['&&', '||']:
-                if isinstance(ltype, IntType) and isinstance(rtype, IntType): return IntType()
-                
-            raise TypeMismatchInExpression(node)
+        # Re-verify with resolved types
+        elif v_strOperator in ['+', '-', '*', '/']:
+            if isinstance(v_tLeft_type, (IntType, FloatType)) and isinstance(v_tRight_type, (IntType, FloatType)):
+                return FloatType() if isinstance(v_tLeft_type, FloatType) or isinstance(v_tRight_type, FloatType) else IntType()
+
+        elif v_strOperator in ['==', '!=', '<', '>', '<=', '>=']:
+            if isinstance(v_tLeft_type, (IntType, FloatType)) and isinstance(v_tRight_type, (IntType, FloatType)):
+                return IntType()
         
         raise TypeMismatchInExpression(node)
 
     def visit_prefix_op(self, node: "PrefixOp", o_in: Any):
         o = o_in[0] if isinstance(o_in, tuple) else o_in
-        etype = self.visit(node.operand, o)
-        op = node.operator
+        v_tExpression_type = self.visit(node.operand, o)
+        v_strOperator = node.operator
         
-        if etype is None and isinstance(node.operand, Identifier):
-            sym = o.lookup(node.operand.name)
-            if sym and sym.is_auto:
-                if op in ['++', '--', '!']:
-                    sym.mtype = IntType(); sym.is_auto = False; etype = IntType()
+        if v_tExpression_type is None and isinstance(node.operand, Identifier):
+            v_objSymbol = o.lookup(node.operand.name)
+            if v_objSymbol and v_objSymbol.m_blIs_auto:
+                if v_strOperator in ['++', '--', '!']:
+                    v_objSymbol.m_tType = IntType() 
+                    v_objSymbol.m_blIs_auto = False
+                    v_tExpression_type = IntType()
                 # for + / - we still don't know if it's int or float
         
-        if etype is None: raise TypeMismatchInExpression(node)
+        if v_tExpression_type is None: 
+            raise TypeMismatchInExpression(node)
 
-        if op in ['++', '--']:
-            if not isinstance(etype, IntType) or not isinstance(node.operand, (Identifier, MemberAccess)):
-                raise TypeMismatchInExpression(node)
-            return IntType()
-        elif op in ['+', '-']:
-            if isinstance(etype, (IntType, FloatType)): return etype
-        elif op == '!':
-            if isinstance(etype, IntType): return IntType()
+        if v_strOperator in ['++', '--']:
+            if isinstance(v_tExpression_type, IntType) and isinstance(node.operand, (Identifier, MemberAccess)):
+                return IntType()
+        elif v_strOperator in ['+', '-']:
+            if isinstance(v_tExpression_type, (IntType, FloatType)): 
+                return v_tExpression_type
+        elif v_strOperator == '!':
+            if isinstance(v_tExpression_type, IntType): 
+                return IntType()
             
         raise TypeMismatchInExpression(node)
 
     def visit_postfix_op(self, node: "PostfixOp", o_in: Any):
         o = o_in[0] if isinstance(o_in, tuple) else o_in
-        etype = self.visit(node.operand, o)
-        op = node.operator
+        v_tExpression_type = self.visit(node.operand, o)
+        v_strOperator = node.operator
         
-        if etype is None and isinstance(node.operand, Identifier):
-            sym = o.lookup(node.operand.name)
-            if sym and sym.is_auto:
-                if op in ['++', '--']:
-                    sym.mtype = IntType(); sym.is_auto = False; etype = IntType()
+        if v_tExpression_type is None and isinstance(node.operand, Identifier):
+            v_objSymbol = o.lookup(node.operand.name)
+            if v_objSymbol and v_objSymbol.m_blIs_auto:
+                if v_strOperator in ['++', '--']:
+                    v_objSymbol.m_tType = IntType()
+                    v_objSymbol.m_blIs_auto = False
+                    v_tExpression_type = IntType()
 
-        if etype is None: raise TypeMismatchInExpression(node)
+        if v_tExpression_type is None: 
+            raise TypeMismatchInExpression(node)
 
-        if op in ['++', '--']:
-            if not isinstance(etype, IntType) or not isinstance(node.operand, (Identifier, MemberAccess)):
-                raise TypeMismatchInExpression(node)
-            return IntType()
+        if v_strOperator in ['++', '--']:
+            if isinstance(v_tExpression_type, IntType) and isinstance(node.operand, (Identifier, MemberAccess)):
+                return IntType()
             
         raise TypeMismatchInExpression(node)
 
@@ -484,109 +465,98 @@ class StaticChecker(ASTVisitor):
         if not isinstance(node.lhs, (Identifier, MemberAccess)):
             raise TypeMismatchInExpression(node)
             
-        ltype = self.visit(node.lhs, o)
+        v_tLeft_type = self.visit(node.lhs, o)
+        v_tRight_type = self.visit(node.rhs, (o, v_tLeft_type))
         
-        # If LHS is unknown auto, we don't have a hint for RHS yet
-        # But if LHS is known, we can use it as hint for RHS (especially for StructLiterals)
-        rtype = self.visit(node.rhs, (o, ltype))
-        
-        if ltype is None:
-            if rtype is not None:
+        if v_tLeft_type is None:
+            if v_tRight_type is not None:
                 # Infer LHS from RHS
-                if isinstance(node.lhs, Identifier):
-                    sym = o.lookup(node.lhs.name)
-                    if sym and sym.is_auto:
-                        sym.mtype = rtype
-                        sym.is_auto = False
-                        ltype = rtype
+                sym = o.lookup(node.lhs.name)
+                if sym and sym.m_blIs_auto:
+                    sym.m_tType = v_tRight_type
+                    sym.m_blIs_auto = False
+                    v_tLeft_type = v_tRight_type
             else:
                 # Both unknown
-                if isinstance(node.lhs, Identifier):
-                    raise TypeCannotBeInferred(node.lhs)
-                raise TypeMismatchInExpression(node)
+                raise TypeCannotBeInferred(node.lhs)
 
-        if not type_eq(ltype, rtype):
-            if getattr(o, 'is_stmt', False):
+        if not type_eq(v_tLeft_type, v_tRight_type):
+            if getattr(o, 'm_blIs_stmt', False):
                 raise TypeMismatchInStatement(node)
             raise TypeMismatchInExpression(node)
             
-        return ltype
+        return v_tLeft_type
 
     def visit_member_access(self, node: "MemberAccess", o_in: Any):
         o = o_in[0] if isinstance(o_in, tuple) else o_in
-        obj_type = self.visit(node.obj, o)
-        if not isinstance(obj_type, StructType):
+        v_tObj_type = self.visit(node.obj, o)
+        if not isinstance(v_tObj_type, StructType):
             raise TypeMismatchInExpression(node)
             
-        struct_decl = o.structs.get(obj_type.struct_name)
-        if not struct_decl: raise UndeclaredStruct(obj_type.struct_name)
+        v_objStruct = o.m_dicStructs.get(v_tObj_type.struct_name)
+        if not v_objStruct: 
+            raise UndeclaredStruct(v_tObj_type.struct_name)
             
-        for member in struct_decl.members:
-            if member.name == node.member: return member.member_type
-                
+        for v_objMember in v_objStruct.members:
+            if v_objMember.name == node.member:
+                return v_objMember.member_type
+            
         raise TypeMismatchInExpression(node)
 
     def visit_func_call(self, node: "FuncCall", o_in: Any):
         o = o_in[0] if isinstance(o_in, tuple) else o_in
-        if node.name not in o.funcs:
+        if node.name not in o.m_dicFuncs:
             raise UndeclaredFunction(node.name)
-            
-        func = o.funcs[node.name]
-        if len(func.params) != len(node.args):
+
+        v_objFunction = o.m_dicFuncs[node.name]
+        if len(v_objFunction.params) != len(node.args):
             raise TypeMismatchInExpression(node)
             
-        for param, arg in zip(func.params, node.args):
-            arg_type = self.visit(arg, (o, param.param_type))
-            
-            # auto param inference? 
-            # TyC parameters CANNOT be auto. So param.param_type is always known.
-            if arg_type is None and isinstance(arg, Identifier):
-                sym = o.lookup(arg.name)
-                if sym and sym.is_auto:
-                    sym.mtype = param.param_type
-                    sym.is_auto = False
-                    arg_type = param.param_type
+        for v_objParam, v_objArgument in zip(v_objFunction.params, node.args):
+            v_tArgument_type = self.visit(v_objArgument, (o, v_objParam.param_type))
 
-            if not type_eq(param.param_type, arg_type):
+            if v_tArgument_type is None and isinstance(v_objArgument, Identifier):
+                v_objSymbol = o.lookup(v_objArgument.name)
+                if v_objSymbol and v_objSymbol.m_blIs_auto:
+                    v_objSymbol.m_tType = v_objParam.param_type
+                    v_objSymbol.m_blIs_auto = False
+                    v_tArgument_type = v_objParam.param_type
+
+            if not type_eq(v_objParam.param_type, v_tArgument_type):
                 raise TypeMismatchInExpression(node)
                 
-        # By the time we call a function, its return type should be fixed (no forward refs)
-        return func.return_type
+        return v_objFunction.return_type
 
     def visit_identifier(self, node: "Identifier", o_in: Any):
         o = o_in[0] if isinstance(o_in, tuple) else o_in
-        sym = o.lookup(node.name)
-        if not sym:
-            # Check if it's a function name? 
-            # In TyC, functions are global, but identifiers are usually variables/params.
-            # FuncCall is handled separately.
+        v_objSymbol = o.lookup(node.name)
+        if not v_objSymbol:
             raise UndeclaredIdentifier(node.name)
             
-        if sym.is_auto and sym.mtype is None:
-            # If we are here and we don't have a hint, we might return None
-            # and let the caller decide if it's an error.
+        if v_objSymbol.m_blIs_auto and v_objSymbol.m_tType is None:
             return None
-            
-        return sym.mtype
+
+        return v_objSymbol.m_tType
 
     def visit_struct_literal(self, node: "StructLiteral", o_in: Any):
         if not isinstance(o_in, tuple) or o_in[1] is None or not isinstance(o_in[1], StructType):
             # No context hint or hint is not a struct
             return None
             
-        o, expected_type = o_in
-        struct_decl = o.structs.get(expected_type.struct_name)
-        if not struct_decl: raise UndeclaredStruct(expected_type.struct_name)
+        o, v_tExpected_type = o_in
+        v_objStruct = o.m_dicStructs.get(v_tExpected_type.struct_name)
+        if not v_objStruct: 
+            raise UndeclaredStruct(v_tExpected_type.struct_name)
             
-        if len(struct_decl.members) != len(node.values):
+        if len(v_objStruct.members) != len(node.values):
             raise TypeMismatchInExpression(node)
             
-        for member, val_expr in zip(struct_decl.members, node.values):
-            val_type = self.visit(val_expr, (o, member.member_type))
-            if not type_eq(member.member_type, val_type):
+        for v_objMember, v_objExpression in zip(v_objStruct.members, node.values):
+            v_tExpression_type = self.visit(v_objExpression, (o, v_objMember.member_type))
+            if not type_eq(v_objMember.member_type, v_tExpression_type):
                 raise TypeMismatchInExpression(node)
                 
-        return expected_type
+        return v_tExpected_type
 
     # Literals
     def visit_int_literal(self, node: "IntLiteral", o: CheckEnv):
