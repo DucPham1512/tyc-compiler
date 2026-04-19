@@ -293,12 +293,12 @@ def test_052():
 def test_053():
     """Error: auto variable declared but never used"""
     source = "void main() { auto x; }"
-    assert "TypeCannotBeInferred(x)" in Checker(source).check_from_source()
+    assert "TypeCannotBeInferred(BlockStmt([VarDecl(auto, x)]))" in Checker(source).check_from_source()
 
 def test_054():
     """Error: auto variable declared, other code runs, still no type inferred"""
     source = "void main() { auto x; { int y = 1; } }"
-    assert "TypeCannotBeInferred(x)" in Checker(source).check_from_source()
+    assert "TypeCannotBeInferred(BlockStmt([VarDecl(auto, x), BlockStmt([VarDecl(IntType(), y = IntLiteral(1))])]))" in Checker(source).check_from_source()
 
 def test_055():
     """Error: auto = auto - both sides unknown"""

@@ -233,7 +233,7 @@ class StaticChecker(ASTVisitor):
         
         for v_strName, v_objSymbol in o.m_arrScopes[-1].items():
             if v_objSymbol.m_blIs_auto and v_objSymbol.m_tType is None:
-                raise TypeCannotBeInferred(v_strName)
+                raise TypeCannotBeInferred(node)
         if v_blEnter_scope:
             o.exit_scope()
             
