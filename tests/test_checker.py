@@ -67,7 +67,7 @@ def test_010():
 def test_011():
     """Error: Redeclared struct member - same name within struct"""
     source = "struct S { int x; float x; };"
-    assert "Redeclared(Variable, x)" in Checker(source).check_from_source()
+    assert "Redeclared(Member, x)" in Checker(source).check_from_source()
 
 def test_012():
     """Error: Variable in function body same name as parameter (shared scope)"""
@@ -107,7 +107,7 @@ def test_018():
 def test_019():
     """Error: Redeclared struct member with different types"""
     source = "struct Point { int x; string x; };"
-    assert "Redeclared(Variable, x)" in Checker(source).check_from_source()
+    assert "Redeclared(Member, x)" in Checker(source).check_from_source()
 
 def test_020():
     """Valid: Single parameter - BVA boundary: only one param, no redeclaration"""

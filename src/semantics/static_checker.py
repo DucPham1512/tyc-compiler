@@ -125,6 +125,10 @@ class CheckEnv:
     def declare(self, p_strKind: str, v_strName: str, p_tType: Optional[TyCType] = None, p_blIs_auto: bool = False):
         if v_strName in self.m_arrScopes[-1]:
             raise Redeclared(p_strKind, v_strName)
+        if p_strKind == "Variable":
+            for scope in self.m_arrScopes[:-1]:
+                if v_strName in scope and scope[v_strName].m_strKind == "Parameter":
+                    raise Redeclared(p_strKind, v_strName)
         v_objSymbol = Symbol(p_strKind, v_strName, p_tType, p_blIs_auto)
         self.m_arrScopes[-1][v_strName] = v_objSymbol
         return v_objSymbol
@@ -150,20 +154,21 @@ class StaticChecker(ASTVisitor):
     def visit_struct_decl(self, node: "StructDecl", o: CheckEnv):
         if node.name in o.m_dicStructs:
             raise Redeclared("Struct", node.name)
-        o.m_dicStructs[node.name] = node
         
         # Visit members
         o.enter_scope()
         for v_objMember in node.members:
             self.visit(v_objMember, o)
         o.exit_scope()
+        
+        o.m_dicStructs[node.name] = node
 
     def visit_member_decl(self, node: "MemberDecl", o: CheckEnv):
         # Members must have explicit types
         if node.member_type is None:
             raise TypeCannotBeInferred(node.name)
         self.visit(node.member_type, o)
-        o.declare("Variable", node.name, node.member_type)
+        o.declare("Member", node.name, node.member_type)
 
     def visit_func_decl(self, node: "FuncDecl", o: CheckEnv):
         if node.name in o.m_dicFuncs:
@@ -179,7 +184,6 @@ class StaticChecker(ASTVisitor):
         o.enter_scope() # Scope for parameters AND outermost block
         for v_objParam in node.params:
             self.visit(v_objParam, o)
-        
         # Tell visit_block_stmt NOT to enter a new scope for the body
         o.m_blEnter_new_scope = False
         self.visit(node.body, o)
@@ -224,7 +228,6 @@ class StaticChecker(ASTVisitor):
         # else entering new scope
         v_blEnter_scope = v_blOld_flag = getattr(o, 'm_blEnter_new_scope', True)
         o.m_blEnter_new_scope = True
-        
         if v_blEnter_scope:
             o.enter_scope()
         
@@ -255,7 +258,7 @@ class StaticChecker(ASTVisitor):
             else:
                 # auto x = init; -> type is inferred from init
                 if v_tInit_type is None: # e.g. auto x = {1, 2}; unknown struct literal
-                    raise TypeCannotBeInferred(node.name)
+                    raise TypeCannotBeInferred(node)
                 v_tVar_type = v_tInit_type
                 v_blIs_auto = False
                 
@@ -292,9 +295,9 @@ class StaticChecker(ASTVisitor):
         self.visit(node.body, o)
         
         # Check auto variables in for-loop scope
-        for name, sym in o.m_arrScopes[-1].items():
-            if sym.m_blIs_auto and sym.m_tType is None:
-                raise TypeCannotBeInferred(name)
+        for v_strName, v_objSymbol in o.m_arrScopes[-1].items():
+            if v_objSymbol.m_blIs_auto and v_objSymbol.m_tType is None:
+                raise TypeCannotBeInferred(node)
                 
         o.m_iLoop_level -= 1
         o.exit_scope()
@@ -339,6 +342,8 @@ class StaticChecker(ASTVisitor):
             # For returning struct literals, use function return type as hint
             v_tExpected_return_type = v_objCurrent_func.return_type if v_objCurrent_func.return_type else o.m_tInferred_return_type
             v_tReturn_expr_type = self.visit(node.expr, (o, v_tExpected_return_type))
+            if v_tReturn_expr_type is None:
+                raise TypeCannotBeInferred(node)
         else:
             v_tReturn_expr_type = VoidType()
             
@@ -478,7 +483,7 @@ class StaticChecker(ASTVisitor):
                     v_tLeft_type = v_tRight_type
             else:
                 # Both unknown
-                raise TypeCannotBeInferred(node.lhs)
+                raise TypeCannotBeInferred(node)
 
         if not type_eq(v_tLeft_type, v_tRight_type):
             if getattr(o, 'm_blIs_stmt', False):
